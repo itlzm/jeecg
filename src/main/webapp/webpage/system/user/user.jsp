@@ -60,7 +60,7 @@
 			 $('#orgIds').val('');	
 		}
 		
-		function setOrgIds() {}
+		function setOrgIds() {return true;}
 		$(function(){
 			$("#departname").prev().hide();
 		});

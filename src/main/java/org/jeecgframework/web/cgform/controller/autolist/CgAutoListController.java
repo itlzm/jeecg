@@ -4,29 +4,15 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import org.jeecgframework.web.cgform.common.CgAutoListConstant;
-import org.jeecgframework.web.cgform.entity.config.CgFormFieldEntity;
-import org.jeecgframework.web.cgform.entity.config.CgFormHeadEntity;
-import org.jeecgframework.web.cgform.entity.template.CgformTemplateEntity;
-import org.jeecgframework.web.cgform.service.autolist.CgTableServiceI;
-import org.jeecgframework.web.cgform.service.autolist.ConfigServiceI;
-import org.jeecgframework.web.cgform.service.config.CgFormFieldServiceI;
-import org.jeecgframework.web.cgform.service.template.CgformTemplateServiceI;
-import org.jeecgframework.web.cgform.util.PublicUtil;
-import org.jeecgframework.web.cgform.util.QueryParamUtil;
-import org.jeecgframework.web.cgform.util.TemplateUtil;
-import org.jeecgframework.web.system.pojo.base.DictEntity;
-import org.jeecgframework.web.system.pojo.base.TSOperation;
-import org.jeecgframework.web.system.service.SystemService;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.jeecgframework.core.common.controller.BaseController;
@@ -43,6 +29,21 @@ import org.jeecgframework.core.util.ResourceUtil;
 import org.jeecgframework.core.util.StringUtil;
 import org.jeecgframework.core.util.SysThemesUtil;
 import org.jeecgframework.core.util.oConvertUtils;
+import org.jeecgframework.web.cgform.common.CgAutoListConstant;
+import org.jeecgframework.web.cgform.entity.config.CgFormFieldEntity;
+import org.jeecgframework.web.cgform.entity.config.CgFormHeadEntity;
+import org.jeecgframework.web.cgform.entity.template.CgformTemplateEntity;
+import org.jeecgframework.web.cgform.service.autolist.CgTableServiceI;
+import org.jeecgframework.web.cgform.service.autolist.ConfigServiceI;
+import org.jeecgframework.web.cgform.service.config.CgFormFieldServiceI;
+import org.jeecgframework.web.cgform.service.template.CgformTemplateServiceI;
+import org.jeecgframework.web.cgform.util.PublicUtil;
+import org.jeecgframework.web.cgform.util.QueryParamUtil;
+import org.jeecgframework.web.cgform.util.TemplateUtil;
+import org.jeecgframework.web.system.pojo.base.DictEntity;
+import org.jeecgframework.web.system.pojo.base.TSOperation;
+import org.jeecgframework.web.system.pojo.base.TSType;
+import org.jeecgframework.web.system.service.SystemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -89,23 +90,69 @@ public class CgAutoListController extends BaseController{
 		//step.3 封装页面数据
 		loadVars(configs,paras,request);
 		//step.4 组合模板+数据参数，进行页面展现
-
+		//update-begin--Author:张忠亮  Date:20151019 for：url中加入olstylecode 可指定风格
 		String template=request.getParameter("olstylecode");
 		if(StringUtils.isBlank(template)){
 				CgFormHeadEntity head = cgFormFieldService.getCgFormHeadByTableName(id);
-
+				//update-begin--Author:张忠亮  Date:20150707 for：online表单风格加入录入、编辑、列表、详情页面设置
 				template=head.getFormTemplate();
 			paras.put("_olstylecode","");
 		}else{
 			paras.put("_olstylecode",template);
 		}
         paras.put("this_olstylecode",template);
+        //update-begin--Author:guoxianhui  Date:20171204 for：TASK #2450 【改造】支持主子表效果
+        if(template!=null && template.indexOf("subgrid")>=0){
+        	String tableName = id;
+        	String tablename = PublicUtil.replaceTableName(tableName);
+            Map<String, Object> data = new HashMap<String, Object>();
+            Map configData = null;
+	        configData = cgFormFieldService.getFtlFormConfig(tableName,jversion);
+            
+        	data = new HashMap(configData);
+        	//如果该表是主表查出关联的附表
+        	CgFormHeadEntity head = (CgFormHeadEntity)data.get("head");
+            Map<String, Object> dataForm = new HashMap<String, Object>();
+          
+            Iterator it=dataForm.entrySet().iterator();
+    	    while(it.hasNext()){
+    	    	Map.Entry entry=(Map.Entry)it.next();
+    	        String ok=(String)entry.getKey();
+    	        Object ov=entry.getValue();
+    	        data.put(ok, ov);
+    	    }
+            Map<String, Object> tableData  = new HashMap<String, Object>();
+            //获取主表或单表表单数据
 
+            tableData.put(tablename, dataForm);
+            //获取附表表表单数据
+        	if(StringUtils.isNotEmpty(id)){
+    	    	if(head.getJformType()==CgAutoListConstant.JFORM_TYPE_MAIN_TALBE){
+    		    	String subTableStr = head.getSubTableStr();
+    		    	if(StringUtils.isNotEmpty(subTableStr)){
+    		    		 String [] subTables = subTableStr.split(",");
+    		    		 List<Map<String,Object>> subTableData = new ArrayList<Map<String,Object>>();
+    		    		 for(String subTable:subTables){
+    			    			subTableData = cgFormFieldService.getSubTableData(tableName,subTable,id);
+    			    			tableData.put(subTable, subTableData);
+    		    		 }
+    		    	}
+    	    	}
+        	}
+        	//装载单表/(主表和附表)表单数据
+        	data.put("data", tableData); 
+        	data.put("id", id);
+        	data.put("head", head);
+        	paras.putAll(data);
+        }
+        //update-end--Author:guoxianhui  Date:20171204 for：TASK #2450 【改造】支持主子表效果
+        
+        //update--begin--author:zhangjiaqiang date:20170628 for: TASK #2194 【online链接样式切换】Online 功能测试的列表链接样式，需要根据浏览器IE进行切换 
         paras.put("brower_type", ContextHolderUtils.getSession().getAttribute("brower_type"));
-
+      //update--end--author:zhangjiaqiang date:20170628 for: TASK #2194 【online链接样式切换】Online 功能测试的列表链接样式，需要根据浏览器IE进行切换 
         CgformTemplateEntity entity=cgformTemplateService.findByCode(template);
 		String html = viewEngine.parseTemplate(TemplateUtil.getTempletPath(entity,0, TemplateUtil.TemplateType.LIST), paras);
-
+		//update-end--Author:张忠亮  Date:20151019 for：url中加入olstylecode 可指定风格
 		PrintWriter writer = null;
 		try {
 			response.setContentType("text/html");
@@ -145,9 +192,9 @@ public class CgAutoListController extends BaseController{
 		String jversion = cgFormFieldService.getCgFormVersionByTableName(configId);
 		Map<String, Object>  configs = configService.queryConfigs(configId,jversion);
 		String table = (String) configs.get(CgAutoListConstant.TABLENAME);
-
+		//update-begin--Author:gengjiajia  Date:20160809 for：TASK #1214 online表单一个表，支持多个配置,还原物理表名
 		table = PublicUtil.replaceTableName(table);
-
+		//update-end--Author:gengjiajia  Date:20160809 for：TASK #1214 online表单一个表，支持多个配置,还原物理表名
 		Map params =  new HashMap<String,Object>();
 		//step.2 获取查询条件以及值
 		List<CgFormFieldEntity> beans = (List<CgFormFieldEntity>) configs.get(CgAutoListConstant.FILEDS);
@@ -156,7 +203,8 @@ public class CgAutoListController extends BaseController{
 			QueryParamUtil.loadQueryParams(request,b,params);
 			fieldMap.put(b.getFieldName(), new String[]{b.getType(), b.getFieldDefault()});
 		}
-
+		
+		//------------------update-begin-------2015年6月1日----author:zhongsy------for:表单配置支持树形------------
 		//参数处理
 		boolean isTree = configs.get(CgAutoListConstant.CONFIG_ISTREE) == null ? false
 				: CgAutoListConstant.BOOL_TRUE.equalsIgnoreCase(configs.get(CgAutoListConstant.CONFIG_ISTREE).toString());
@@ -184,12 +232,12 @@ public class CgAutoListController extends BaseController{
 				params.put(parentIdFieldName, "=" + treeId);
 			}
 		}
-
+		//------------------update-end-------2015年6月1日----author:zhongsy------for:表单配置支持树形------------
 		
 		int p = page==null?1:Integer.parseInt(page);
 		int r = rows==null?99999:Integer.parseInt(rows);
 		//step.3 进行查询返回结果，如果为tree的下级数据，则不需要分页
-
+		//------------------update-start-------2015年6月1日----author:zhongsy------for:表单配置支持树形------------
 		List<Map<String, Object>> result = null;
 		if(isTree && treeId !=null) {
 			//防止下级数据太大，最大只取500条
@@ -203,7 +251,7 @@ public class CgAutoListController extends BaseController{
 			cgTableService.treeFromResultHandle(table, parentIdFieldName, parentIdFieldType,
 					result);
 		}
-
+		//------------------update-end-------2015年6月1日----author:zhongsy------for:表单配置支持树形------------
 		
 		//处理页面中若存在checkbox只能显示code值而不能显示text值问题
 		Map<String, Object> dicMap = new HashMap<String, Object>();
@@ -213,7 +261,7 @@ public class CgAutoListController extends BaseController{
 			if(dicList.size() > 0){
 				for(Map<String, Object> resultMap:result){
 					StringBuffer sb = new StringBuffer();
-
+					//update-begin--Author:scott----  Date:20170511 ----for：字典类型支持int类型-----
 					Object obj = resultMap.get(b.getFieldName());
 					String value = null;
 					if(obj instanceof Integer){
@@ -221,7 +269,7 @@ public class CgAutoListController extends BaseController{
 					}else{
 						value = (String)obj;
 					}
-
+					//update-end--Author:scott----  Date:20170511 ----for：字典类型支持int类型-----
 					if(oConvertUtils.isEmpty(value)){continue;}
 					String[] arrayVal = value.split(",");
 					if(arrayVal.length > 1){
@@ -247,14 +295,14 @@ public class CgAutoListController extends BaseController{
 		PrintWriter writer = null;
 		try {
 			writer = response.getWriter();
-
+			//------------------update-start-------2015年6月1日----author:zhongsy------for:表单配置支持树形------------
 			if(isTree && treeId !=null) {
 				//下级列表
 				writer.println(QueryParamUtil.getJson(result));
 			}else {
 				writer.println(QueryParamUtil.getJson(result,size));
 			}
-
+			//------------------update-end-------2015年6月1日----author:zhongsy------for:表单配置支持树形------------
 			writer.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -297,7 +345,10 @@ public class CgAutoListController extends BaseController{
 //						}
 						for(DictEntity dictEntity:dicDataList){
 							if(value.equalsIgnoreCase(dictEntity.getTypecode())){
+								//------------------update-begin------for:-国际化处理-----------------------author:zhagndaihao------------
 								r.put(bean.getFieldName(),MutiLangUtil.getMutiLangInstance().getLang(dictEntity.getTypename()));
+								//------------------update-end-----for:-国际化处理----------------------------author:zhagndaihao---------
+								break;
 							}
 						}
 					}
@@ -318,13 +369,13 @@ public class CgAutoListController extends BaseController{
 	public AjaxJson del(String configId,String id,
 			HttpServletRequest request) {
 		AjaxJson j = new AjaxJson();
-
+		//update-begin--Author:gengjiajia  Date:20160809 for：TASK #1214 online表单一个表，支持多个配置,还原真实表名
 		String tableName = PublicUtil.replaceTableName(configId);
 		String jversion = cgFormFieldService.getCgFormVersionByTableName(tableName);
 		String table = (String) configService.queryConfigs(tableName,jversion).get(CgAutoListConstant.TABLENAME);
 		//String jversion = cgFormFieldService.getCgFormVersionByTableName(configId);
 		//String table = (String) configService.queryConfigs(configId,jversion).get(CgAutoListConstant.TABLENAME);
-
+		//update-end--Author:gengjiajia  Date:20160809 for：TASK #1214 online表单一个表，支持多个配置,还原真实表名
 		cgTableService.delete(table, id);
 		String message = "删除成功";
 		log.info("["+IpUtil.getIpAddr(request)+"][online表单数据删除]"+message+"表名："+configId);
@@ -336,7 +387,7 @@ public class CgAutoListController extends BaseController{
 	/**
 	 * 删除动态表-批量
 	 * @param configId 配置id
-	 * @param id 主键
+	 * @param ids 主键
 	 * @param request
 	 * @return
 	 */
@@ -375,7 +426,7 @@ public class CgAutoListController extends BaseController{
 		List<Map> queryList = new ArrayList<Map>();
 		StringBuilder fileds = new StringBuilder();
 		StringBuilder initQuery = new StringBuilder();
-
+		//------------------update-begin-------2014年9月3日----author:JueYue------for:-列表数据隐藏权限------------
 		Set<String> operationCodes = (Set<String>) request.getAttribute(Globals.OPERATIONCODES);
 		Map<String,TSOperation> operationCodesMap = new HashMap<String, TSOperation>();
 		if(operationCodes != null){
@@ -391,7 +442,7 @@ public class CgAutoListController extends BaseController{
 			if(operationCodesMap.containsKey(bean.getFieldName())) {
 				continue;
 			}
-
+			//------------------update-end---2014年9月3日----author:JueYue------for:-列表数据隐藏权限------------
 			Map fm = new HashMap<String, Object>();
 			fm.put(CgAutoListConstant.FILED_ID, bean.getFieldName());
 			fm.put(CgAutoListConstant.FIELD_TITLE, bean.getContent());
@@ -407,9 +458,9 @@ public class CgAutoListController extends BaseController{
 			fm.put(CgAutoListConstant.FIELD_QUERYMODE, bean.getQueryMode());
 			fm.put(CgAutoListConstant.FIELD_SHOWTYPE, bean.getShowType());
 			fm.put(CgAutoListConstant.FIELD_TYPE, bean.getType());
-
+			//update-begin--Author:scott  Date:20170425 for：行编辑非空判断-------
 			fm.put(CgAutoListConstant.FIELD_IS_NULL, bean.getIsNull());
-
+			//update-begin--Author:scott  Date:20170425 for：行编辑非空判断-------
 			fm.put(CgAutoListConstant.FIELD_LENGTH, bean.getFieldLength()==null?"120":bean.getFieldLength());
 			fm.put(CgAutoListConstant.FIELD_HREF, bean.getFieldHref()==null?"":bean.getFieldHref());
 			loadDic(fm,bean);
@@ -483,9 +534,9 @@ public class CgAutoListController extends BaseController{
 			sb.append(SysThemesUtil.getCommonTheme(sysThemesEnum));
 //			sb.append("<script type=\"text/javascript\" src=\"plug-in/lhgDialog/lhgdialog.min.js\"></script>");
 			sb.append(SysThemesUtil.getLhgdialogTheme(sysThemesEnum));
-
+			//update--begin--author:scott Date:20170304 for:替换layer风格提示框
 			sb.append("<script type=\"text/javascript\" src=\"plug-in/layer/layer.js\"></script>");
-
+			//update--end--author:scott Date:20170304 for:替换layer风格提示框
 			sb.append(StringUtil.replace("<script type=\"text/javascript\" src=\"plug-in/tools/curdtools_{0}.js\"></script>", "{0}", lang));
 			
 			sb.append("<script type=\"text/javascript\" src=\"plug-in/tools/easyuiextend.js\"></script>");
@@ -634,6 +685,22 @@ public class CgAutoListController extends BaseController{
 	 * @return
 	 */
 	private List<DictEntity> queryDic(String dicTable, String dicCode,String dicText) {
+		//add--begin--author:guoxianhui Date:20171204 for:TASK #2444 【改进】根据你的建议优化系统 第四点
+		if(dicTable==null || dicTable.length()<=0){
+			List<TSType> listt = ResourceUtil.allTypes.get(dicCode.toLowerCase());
+			List<DictEntity> li = new ArrayList<DictEntity>();
+			if(listt!=null){
+				for (TSType tsType : listt) {
+					DictEntity d = new DictEntity();
+					d.setTypecode(tsType.getTypecode());
+					d.setTypename(tsType.getTypename());
+					li.add(d);
+				}
+			}
+			return li;
+		}
+		//add--end--author:guoxianhui Date:20171204 for:TASK #2444 【改进】根据你的建议优化系统 第四点
+		
 //		StringBuilder dicSql = new StringBuilder();
 //		if(StringUtil.isEmpty(dicTable)){//step.1 如果没有字典表则使用系统字典表
 //			dicTable = CgAutoListConstant.SYS_DIC;
@@ -665,8 +732,9 @@ public class CgAutoListController extends BaseController{
 			sysVarName = sysVarName.replaceAll("\\{", "");
 			sysVarName = sysVarName.replaceAll("\\}", "");
 			sysVarName =sysVarName.replace("sys.", "");
-
+			//---author:jg_xugj----start-----date:20151226--------for：#814 【数据权限】扩展支持写表达式，通过session取值
 			return ResourceUtil.converRuleValue(sysVarName); 		
+			//---author:jg_xugj----end-----date:20151226--------for：#814 【数据权限】扩展支持写表达式，通过session取值
 		}else{
 			return sysVarName;
 		}

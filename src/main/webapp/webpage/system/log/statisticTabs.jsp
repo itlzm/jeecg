@@ -3,8 +3,8 @@
 <!-- context path -->
 <!-- update-begin--Author:xuelin  Date:20170428 for：#1755 【美化】用户分析报表，多tab格式，是否可以美化  需要改底层-------------------- -->
 <t:base type="jquery,easyui,tools"></t:base>
-<script type="text/javascript" src="plug-in/Highcharts-2.2.5/js/highcharts.src.js"></script>
-<script type="text/javascript" src="plug-in/Highcharts-2.2.5/js/modules/exporting.src.js"></script>
+<script type="text/javascript" src="plug-in/Highcharts-6.0.4/code/highcharts.src.js"></script>
+<script type="text/javascript" src="plug-in/Highcharts-6.0.4/code/modules/exporting.src.js"></script>
 <t:tabs id="tt" iframe="false">
 	<t:tab href="logController.do?userBroswer&reportType=line" icon="fa fa-line-chart" title="user.analysis.line" id="pnode"></t:tab>
 	<t:tab href="logController.do?userBroswer&reportType=pie" icon="fa fa-pie-chart" title="user.analysis.pie" id="pnode"></t:tab>
