@@ -78,14 +78,14 @@
                       <label class="block clearfix">
 								<span class="block input-icon input-icon-right">
 								<!-- update-start--Author:yugwu  Date:20170901 for:TASK #2324 【改进】登录记住用户名不起作用---- -->
-									<input type="text"  name="userName" iscookie="true" class="form-control" placeholder="请输入用户名"  id="userName" value="admin"/>
+									<input type="text"  name="userName" iscookie="true" class="form-control" placeholder="请输入用户名"  id="userName" value=""/>
 								<!-- update-end--Author:yugwu  Date:20170901 for:TASK #2324 【改进】登录记住用户名不起作用---- -->
 									<i class="ace-icon fa fa-user"></i>
 								</span>
                       </label>
                       <label class="block clearfix">
 								<span class="block input-icon input-icon-right">
-									<input type="password" name="password" class="form-control" placeholder="请输入密码" id="password" value="123456"/>
+									<input type="password" name="password" class="form-control" placeholder="请输入密码" id="password" value=""/>
 									<i class="ace-icon fa fa-lock"></i>
 								</span>
                       </label>
