@@ -1,14 +1,13 @@
 package org.jeecgframework.web.system.listener;
 
-import javax.servlet.ServletContextEvent;
-
-import com.oracle.tools.packager.Log;
 import org.jeecgframework.web.system.service.DynamicDataSourceServiceI;
 import org.jeecgframework.web.system.service.MutiLangServiceI;
 import org.jeecgframework.web.system.service.SystemService;
 import org.quartz.Scheduler;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
+
+import javax.servlet.ServletContextEvent;
 
 
 /**
