@@ -2,9 +2,11 @@ package org.jeecgframework.web.system.listener;
 
 import javax.servlet.ServletContextEvent;
 
+import com.oracle.tools.packager.Log;
 import org.jeecgframework.web.system.service.DynamicDataSourceServiceI;
 import org.jeecgframework.web.system.service.MutiLangServiceI;
 import org.jeecgframework.web.system.service.SystemService;
+import org.quartz.Scheduler;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 
@@ -17,8 +19,23 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
 public class InitListener  implements javax.servlet.ServletContextListener {
 
 	
-	public void contextDestroyed(ServletContextEvent arg0) {
-		
+	public void contextDestroyed(ServletContextEvent event) {
+		try{
+			Scheduler startQuartz = (Scheduler) WebApplicationContextUtils
+					.getWebApplicationContext(event.getServletContext())
+					.getBean("schedulerFactory");
+
+			if(startQuartz != null){
+				startQuartz.shutdown(true);
+			}
+
+			Thread.sleep(1000);//主线程睡眠1s
+		}catch (Exception e){
+			e.printStackTrace();
+		}
+		event.getServletContext().log("QuartzContextListener销毁成功！");
+		System.out.println("QuartzContextListener销毁成功！");
+
 	}
 
 	
